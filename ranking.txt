@@ -1,10 +1,13 @@
 Gustavo;1818300
+S;1677800
+ALUNO;1473400
 A;1466000
 A;1417000
 Stefany;1221900
 A;1058600
 A;1047900
 AAAAAAAA;813000
-teste;682200
-JOGADOR 1;662200
-S;642600
+<<<<<<<
+=======
+S;682200
+>>>>>>> 2f99d91 (att na img vida e mudança na hub)

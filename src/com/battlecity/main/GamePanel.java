@@ -120,6 +120,7 @@ public class GamePanel extends JPanel implements Runnable {
     // =========================================================================
 
     private BufferedImage imgAvisoMorte, imgGameOver, imgWon;
+    private BufferedImage hudImagemVida;
 
     // =========================================================================
     // ENTIDADES DO MUNDO
@@ -458,37 +459,195 @@ public class GamePanel extends JPanel implements Runnable {
 
     /** Painel lateral com nome, score, dificuldade, barra de HP, vidas, inimigos restantes e fase. */
     public void desenharHUD(Graphics2D g2) {
-        // Fundo e separador do HUD
-        g2.setColor(Color.LIGHT_GRAY);
-        g2.fillRect(LARGURA_MAPA, 0, LARGURA_HUD, ALTURA_TELA);
-        g2.setColor(Color.BLACK);
-        g2.setStroke(new BasicStroke(4));
-        g2.drawLine(LARGURA_MAPA, 0, LARGURA_MAPA, ALTURA_TELA);
+        g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+        g2.setRenderingHint(RenderingHints.KEY_TEXT_ANTIALIASING, RenderingHints.VALUE_TEXT_ANTIALIAS_ON);
 
-        int xHUD = LARGURA_MAPA + 20;
-        String[] nomesDificuldade = {"FÁCIL", "MÉDIO", "DIFÍCIL"};
+        final int X      = LARGURA_MAPA;
+        final int W      = LARGURA_HUD;
+        final int H      = ALTURA_TELA;
+        final int PAD    = 14;
+        final int CX     = X + PAD;                  // X base do conteúdo
+        final int CW     = W - PAD * 2;              // Largura útil do conteúdo
 
-        // Informações textuais
+        // ── Fundo escuro ─────────────────────────────────────────────────────
+        g2.setColor(new Color(18, 20, 28));
+        g2.fillRect(X, 0, W, H);
+
+        // Borda lateral esquerda laranja
+        g2.setColor(new Color(220, 120, 20));
+        g2.setStroke(new BasicStroke(3));
+        g2.drawLine(X + 2, 0, X + 2, H);
+        g2.setStroke(new BasicStroke(1));
+
+        // ── Helper: divisor fino ─────────────────────────────────────────────
+        // (usado inline abaixo com g2.fillRect)
+
+        // ── SEÇÃO: Cabeçalho (jogador + score + modo) ─────────────────────
+        int y = 18;
+
+        // Label "JOGADOR"
+        g2.setFont(new Font("Monospaced", Font.PLAIN, 10));
+        g2.setColor(new Color(140, 140, 160));
+        g2.drawString("JOGADOR", CX, y);
+        y += 16;
+
+        // Nome do jogador em destaque
+        g2.setFont(new Font("Monospaced", Font.BOLD, 15));
+        g2.setColor(new Color(255, 200, 50));
+        String nomeExibido = nomeJogador.length() > 11 ? nomeJogador.substring(0, 11) : nomeJogador;
+        g2.drawString(nomeExibido, CX, y);
+        y += 18;
+
+        // Score
+        g2.setFont(new Font("Monospaced", Font.PLAIN, 10));
+        g2.setColor(new Color(140, 140, 160));
+        g2.drawString("PONTUAÇÃO", CX, y);
+        y += 15;
         g2.setFont(new Font("Monospaced", Font.BOLD, 16));
-        g2.setColor(Color.BLACK);
-        g2.drawString("PILOTO: " + nomeJogador,                                           xHUD, 40);
-        g2.drawString("SCORE: " + String.format("%06d", pontuacaoTotal + pontuacaoFase),  xHUD, 60);
-        g2.drawString("MODO: " + nomesDificuldade[dificuldade],                            xHUD, 80);
+        g2.setColor(Color.WHITE);
+        g2.drawString(String.format("%07d", pontuacaoTotal + pontuacaoFase), CX, y);
+        y += 16;
 
-        // Barra de blindagem (HP)
-        g2.setFont(new Font("Arial", Font.BOLD, 14));
-        g2.setColor(Color.BLACK);
-        g2.drawString("BLINDAGEM", xHUD, 128);
-        g2.setColor(Color.RED);   g2.fillRect(xHUD, 140, 150, 15);                    // Fundo vermelho = dano
-        g2.setColor(Color.GREEN); g2.fillRect(xHUD, 140, (int)(jogador.hp * 1.5), 15); // HP atual em verde
-        g2.setColor(Color.BLACK); g2.drawRect(xHUD, 140, 150, 15);                    // Borda da barra
+        // Modo de dificuldade
+        String[] nomesDificuldade = {"FÁCIL", "MÉDIO", "DIFÍCIL"};
+        Color[]  coresDificuldade = {new Color(80, 200, 80), new Color(240, 180, 30), new Color(220, 60, 60)};
+        g2.setFont(new Font("Monospaced", Font.BOLD, 11));
+        g2.setColor(coresDificuldade[dificuldade]);
+        g2.drawString("● " + nomesDificuldade[dificuldade], CX, y);
+        y += 14;
 
-        // Contadores
-        g2.setFont(new Font("Arial", Font.BOLD, 20));
-        g2.setColor(Color.BLACK);
-        g2.drawString("VIDAS: x"    + (jogador != null ? jogador.vidas : 0),  xHUD, 222);
-        g2.drawString("INIMIGOS: x" + (totalInimigosFase - inimigosMortos),   xHUD, 280);
-        g2.drawString("FASE "       + faseAtual,                               xHUD, ALTURA_TELA - 30);
+        // Divisor
+        g2.setColor(new Color(50, 55, 70));
+        g2.fillRect(CX, y, CW, 1);
+        y += 10;
+
+        // ── SEÇÃO: Blindagem (HP) ─────────────────────────────────────────
+        g2.setFont(new Font("Monospaced", Font.PLAIN, 10));
+        g2.setColor(new Color(140, 140, 160));
+        g2.drawString("BLINDAGEM", CX, y);
+        y += 12;
+
+        // Barra de HP com cantos arredondados
+        int hpAtual   = (jogador != null) ? jogador.hp : 0;
+        int barraLarg = CW;
+        int barraAlt  = 12;
+        int hpLarg    = (int)((hpAtual / (float) HP_MAXIMO) * barraLarg);
+        // Fundo vermelho escuro (dano)
+        g2.setColor(new Color(100, 20, 20));
+        g2.fillRoundRect(CX, y, barraLarg, barraAlt, 6, 6);
+        // HP atual: verde → amarelo → vermelho conforme percentual
+        float pct = hpAtual / (float) HP_MAXIMO;
+        Color corHP = pct > 0.5f
+            ? new Color(50, 200, 50)
+            : pct > 0.25f
+                ? new Color(220, 180, 30)
+                : new Color(220, 50, 50);
+        if (hpLarg > 0) {
+            g2.setColor(corHP);
+            g2.fillRoundRect(CX, y, hpLarg, barraAlt, 6, 6);
+        }
+        // Borda fina
+        g2.setColor(new Color(80, 85, 100));
+        g2.drawRoundRect(CX, y, barraLarg, barraAlt, 6, 6);
+        // Percentual dentro da barra
+        g2.setFont(new Font("Monospaced", Font.BOLD, 9));
+        g2.setColor(Color.WHITE);
+        String pctStr = (int)(pct * 100) + "%";
+        int pctX = CX + barraLarg / 2 - g2.getFontMetrics().stringWidth(pctStr) / 2;
+        g2.drawString(pctStr, pctX, y + barraAlt - 2);
+        y += barraAlt + 12;
+
+        // Divisor
+        g2.setColor(new Color(50, 55, 70));
+        g2.fillRect(CX, y, CW, 1);
+        y += 12;
+
+        // ── SEÇÃO: Vidas ──────────────────────────────────────────────────
+        int vidas = (jogador != null) ? jogador.vidas : 0;
+
+        g2.setFont(new Font("Monospaced", Font.PLAIN, 10));
+        g2.setColor(new Color(140, 140, 160));
+        g2.drawString("VIDAS", CX, y);
+        y += 14;
+
+        // Ícones de vida (até 5 ícones; se tiver mais, mostra "xN" ao lado)
+        int iconeSize  = 24;
+        int iconeGap   = 4;
+        int maxIcones  = Math.min(vidas, 5);
+        int iconeY     = y;
+
+        for (int i = 0; i < maxIcones; i++) {
+            if (hudImagemVida != null) {
+                g2.drawImage(hudImagemVida, CX + i * (iconeSize + iconeGap), iconeY, iconeSize, iconeSize, null);
+            } else {
+                // Fallback: coração vermelho
+                g2.setFont(new Font("Arial", Font.BOLD, 20));
+                g2.setColor(new Color(220, 50, 50));
+                g2.drawString("♥", CX + i * (iconeSize + iconeGap), iconeY + iconeSize - 2);
+            }
+        }
+        // Número de vidas ao lado dos ícones (sempre visível)
+        g2.setFont(new Font("Monospaced", Font.BOLD, 18));
+        g2.setColor(Color.WHITE);
+        int numX = CX + maxIcones * (iconeSize + iconeGap) + 4;
+        g2.drawString("x" + vidas, numX, iconeY + iconeSize - 4);
+        y += iconeSize + 12;
+
+        // Divisor
+        g2.setColor(new Color(50, 55, 70));
+        g2.fillRect(CX, y, CW, 1);
+        y += 12;
+
+        // ── SEÇÃO: Inimigos ───────────────────────────────────────────────
+        int inimigoRestantes = totalInimigosFase - inimigosMortos;
+
+        g2.setFont(new Font("Monospaced", Font.PLAIN, 10));
+        g2.setColor(new Color(140, 140, 160));
+        g2.drawString("INIMIGOS", CX, y);
+        y += 14;
+
+        // Contador grande em vermelho
+        g2.setFont(new Font("Monospaced", Font.BOLD, 32));
+        g2.setColor(new Color(220, 60, 60));
+        g2.drawString("x" + inimigoRestantes, CX, y + 28);
+
+        // Mini barra de progresso da fase (inimigos mortos / total)
+        int progY     = y + 36;
+        int progLarg  = CW;
+        int progAlt   = 6;
+        float progPct = totalInimigosFase > 0 ? inimigosMortos / (float) totalInimigosFase : 0f;
+        g2.setColor(new Color(40, 45, 60));
+        g2.fillRoundRect(CX, progY, progLarg, progAlt, 4, 4);
+        g2.setColor(new Color(80, 180, 80));
+        g2.fillRoundRect(CX, progY, (int)(progLarg * progPct), progAlt, 4, 4);
+        g2.setColor(new Color(80, 85, 100));
+        g2.drawRoundRect(CX, progY, progLarg, progAlt, 4, 4);
+        y += 50;
+
+        // Divisor
+        g2.setColor(new Color(50, 55, 70));
+        g2.fillRect(CX, y, CW, 1);
+
+        // ── SEÇÃO: Fase (rodapé) ──────────────────────────────────────────
+        int rodapeY = H - 44;
+
+        // Caixa de destaque da fase
+        g2.setColor(new Color(30, 35, 50));
+        g2.fillRoundRect(CX, rodapeY, CW, 34, 8, 8);
+        g2.setColor(new Color(220, 120, 20));
+        g2.setStroke(new BasicStroke(1.5f));
+        g2.drawRoundRect(CX, rodapeY, CW, 34, 8, 8);
+        g2.setStroke(new BasicStroke(1));
+
+        g2.setFont(new Font("Monospaced", Font.PLAIN, 10));
+        g2.setColor(new Color(140, 140, 160));
+        g2.drawString("FASE", CX + CW / 2 - 12, rodapeY + 13);
+
+        g2.setFont(new Font("Monospaced", Font.BOLD, 16));
+        g2.setColor(new Color(255, 200, 50));
+        String faseStr = faseAtual + " / " + MAX_FASES;
+        int faseStrW = g2.getFontMetrics().stringWidth(faseStr);
+        g2.drawString(faseStr, CX + CW / 2 - faseStrW / 2, rodapeY + 29);
     }
 
     private void desenharOverlayVitoria(Graphics2D g2, BufferedImage imagem, String mensagem) {
@@ -705,6 +864,13 @@ public class GamePanel extends JPanel implements Runnable {
                 ImageIO.read(getClass().getResourceAsStream("/imagens/won.bmp")), Color.BLACK);
         } catch (Exception e) {
             System.err.println("Aviso: assets de overlay não encontrados — " + e.getMessage());
+        }
+        try {
+            var stream = getClass().getResourceAsStream("/imagens/vida.png");
+            if (stream != null)
+                hudImagemVida = ImageUtils.transformarTransparente(ImageIO.read(stream), Color.WHITE);
+        } catch (Exception e) {
+            System.err.println("Aviso: vida.png não encontrada no HUD.");
         }
     }
 }
