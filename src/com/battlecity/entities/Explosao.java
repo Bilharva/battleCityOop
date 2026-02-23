@@ -6,12 +6,10 @@ import java.awt.image.BufferedImage;
 import javax.imageio.ImageIO;
 
 /**
- * Animação de explosão exibida ao destruir um tanque inimigo.
- *
- * Exibe 5 frames sequencialmente via contagem de frames do game loop,
- * sem thread própria — a atualização é feita pelo GamePanel a cada tick.
- * Ao final da animação, {@code ativa} é definido como {@code false} e
- * o GamePanel remove a instância da lista automaticamente.
+ * exibe 5 frames sequencialmente via contagem de frames do game loop,
+ * sem thread própria — a atualização é feita pelo GamePanel
+ * no final da animação, ativa é definido como false e
+ * o GamePanel remove a instância da lista automaticamente
  */
 public class Explosao {
 
@@ -21,19 +19,18 @@ public class Explosao {
     public boolean ativa = true;
 
     private static final int TOTAL_FRAMES    = 5;
-    private static final int DURACAO_FRAME   = 4; // Ticks do game loop por frame de animação
+    private static final int DURACAO_FRAME   = 4;
 
     private final BufferedImage[] frames = new BufferedImage[TOTAL_FRAMES];
     private int frameAtual    = 0;
     private int contadorFrame = 0;
 
-    // =========================================================================
     // CONSTRUTOR
-    // =========================================================================
+
 
     public Explosao(GamePanel gp, int x, int y) {
         this.gp = gp;
-        // Centraliza a explosão (64px) sobre o tanque destruído (40px)
+        // centraliza a explosão (64px) sobre o tanque destruído (40px)
         this.x  = x - 12;
         this.y  = y - 12;
         carregarFrames();
@@ -50,11 +47,9 @@ public class Explosao {
         }
     }
 
-    // =========================================================================
     // ATUALIZAÇÃO E RENDERIZAÇÃO
-    // =========================================================================
 
-    /** Avança a animação a cada tick. Desativa a explosão ao terminar o último frame. */
+    //** avança a animação a cada tick. desativa a explosão ao terminar o último frame
     public void atualizar() {
         if (!ativa) return;
 

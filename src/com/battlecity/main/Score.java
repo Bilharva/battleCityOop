@@ -1,9 +1,9 @@
 package com.battlecity.main;
 
 /**
- * Representa uma entrada no ranking: nome do jogador e pontuação.
- * Implementa Comparable para permitir ordenação automática decrescente
- * via Collections.sort() — do maior para o menor score.
+ * representa uma entrada no ranking: nome do jogador e pontuação
+ * implementa Comparable para permitir ordenação automática decrescente
+ * via Collections.sort() — do maior para o menor score
  */
 public class Score implements Comparable<Score> {
 
@@ -18,13 +18,13 @@ public class Score implements Comparable<Score> {
     public String getNome()   { return nome; }
     public int    getPontos() { return pontos; }
 
-    /** Ordenação decrescente: scores maiores aparecem primeiro na lista. */
+    /** ordenação decrescente: scores maiores aparecem primeiro na lista */
     @Override
     public int compareTo(Score outro) {
         return outro.pontos - this.pontos;
     }
 
-    /** Formato de persistência: "NOME;PONTOS" — lido por GerenciadorRanking. */
+    /** formato de persistência: "NOME;PONTOS" — lido por GerenciadorRanking */
     @Override
     public String toString() {
         return nome + ";" + pontos;

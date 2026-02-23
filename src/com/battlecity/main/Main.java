@@ -3,10 +3,10 @@ package com.battlecity.main;
 import javax.swing.JFrame;
 
 /**
- * Ponto de entrada da aplicação e orquestrador de navegação entre telas.
+ * entrada da aplicação e orquestrador de navegação entre telas
  *
- * Responsabilidade única: controlar qual tela está ativa na janela principal.
- * Cada transição remove o conteúdo atual e adiciona o novo componente,
+ * responsabilidade única: controlar qual tela está ativa na janela principal
+ * cada transição remove o conteúdo atual e adiciona o novo componente,
  * delegando toda lógica de jogo e UI para as classes de cada tela.
  */
 public class Main {
@@ -38,24 +38,24 @@ public class Main {
     }
 
     /**
-     * Instancia o motor de jogo e inicia o game loop.
+     * instancia o motor de jogo e inicia o game loop
      *
-     * @param nomeJogador Nome digitado na tela de alistamento.
-     * @param dificuldade 0 = Fácil, 1 = Médio, 2 = Difícil.
+     * @param nomeJogador nome digitado na tela de alistamento
+     * @param dificuldade 0 = fcail, 1 = médio, 2 = difícil
      */
     public void iniciarJogo(String nomeJogador, int dificuldade) {
         GamePanel gamePanel = new GamePanel(this, nomeJogador, dificuldade);
         trocarTela(gamePanel);
 
         // iniciarThreadJogo() chamado após trocarTela() para garantir que
-        // o painel já está montado na janela antes de o game loop começar.
+        // o painel já está montado na janela antes de o game loop começar
         gamePanel.iniciarThreadJogo();
         gamePanel.requestFocusInWindow();
     }
 
     /**
-     * Substitui o conteúdo da janela pelo novo componente e força redesenho.
-     * Centralizar aqui evita repetição do pack/revalidate em cada transição.
+     * substitui o conteúdo da janela pelo novo componente e força redesenho
+     * centralizar aqui evita repetição do pack/revalidate em cada transição
      */
     private void trocarTela(java.awt.Component novaTela) {
         window.getContentPane().removeAll();

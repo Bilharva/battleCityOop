@@ -6,11 +6,11 @@ import java.awt.image.BufferedImage;
 import javax.imageio.ImageIO;
 
 /**
- * Power-up de vida extra.
+ * power-up de vida extra.
  *
- * Spawna na posição onde um inimigo foi destruído e desaparece após 8 segundos.
- * Nos últimos 2 segundos pisca para avisar o jogador que vai sumir.
- * A colisão é detectada por {@code GamePanel.verificarColisoes()}.
+ * cria na posição onde um inimigo foi destruído e desaparece após 8 segundos.
+ * os últimos 2 segundos pisca para avisar o jogador que vai sumir.
+ * colisão é detectada por {@code GamePanel.verificarColisoes()}.
  */
 public class PowerUp {
 
@@ -19,18 +19,15 @@ public class PowerUp {
     public int     x, y;
     public boolean ativo = true;
 
-    /** Sprite do power-up carregado uma vez no construtor. */
+    // sprite do power-up carregado uma vez no construtor
     private BufferedImage imagemVida;
 
-    private static final long DURACAO_MS      = 8_000; // Tempo total na tela (ms)
-    private static final long AVISO_PISCAR_MS = 2_000; // Começa a piscar neste tempo restante
-    private static final int  INTERVALO_PISCA = 200;   // Período do piscar (ms)
+    private static final long DURACAO_MS      = 8_000; // tempo total na tela (ms)
+    private static final long AVISO_PISCAR_MS = 2_000; // começa a piscar neste tempo restante
+    private static final int  INTERVALO_PISCA = 200;   // período do piscar (ms)
 
     private final long tempoCriacao = System.currentTimeMillis();
-
-    // =========================================================================
     // CONSTRUTOR
-    // =========================================================================
 
     public PowerUp(GamePanel gp, int x, int y) {
         this.gp = gp;
@@ -49,16 +46,14 @@ public class PowerUp {
         }
     }
 
-    /** Hitbox menor que o tile para exigir contato mais preciso ao coletar. */
+    // hitbox menor que o tile para exigir contato mais preciso ao coletar
     public Rectangle getHitbox() {
         return new Rectangle(x + 5, y + 5, 30, 30);
     }
 
-    // =========================================================================
     // ATUALIZAÇÃO E RENDERIZAÇÃO
-    // =========================================================================
 
-    /** Desativa o power-up após DURACAO_MS. Chamado a cada frame pelo GamePanel. */
+    //desativa o power-up após DURACAO_MS. chamado a cada frame pelo GamePanel
     public void atualizar() {
         if (System.currentTimeMillis() - tempoCriacao > DURACAO_MS) {
             ativo = false;
@@ -68,12 +63,12 @@ public class PowerUp {
     public void desenhar(Graphics2D g2) {
         if (!ativo) return;
 
-        // Pisca nos últimos AVISO_PISCAR_MS para sinalizar que vai sumir
+        // Ppsca nos últimos AVISO_PISCAR_MS para sinalizar que vai sumir
         long tempoRestante = DURACAO_MS - (System.currentTimeMillis() - tempoCriacao);
         boolean visivelNoPiscar = (System.currentTimeMillis() / INTERVALO_PISCA) % 2 == 0;
         if (tempoRestante < AVISO_PISCAR_MS && visivelNoPiscar) return;
 
-        // Imagem de vida — ou fallback com caixa dourada se a imagem não carregou
+        // imagem de vida — ou fallback com caixa dourada se a imagem não carregou
         if (imagemVida != null) {
             g2.drawImage(imagemVida, x, y, 40, 40, null);
         } else {

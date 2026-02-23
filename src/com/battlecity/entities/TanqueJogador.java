@@ -9,16 +9,12 @@ import java.awt.Rectangle;
 import java.awt.image.BufferedImage;
 
 /**
- * Tanque controlado pelo jogador via teclado. Roda em thread própria.
  *
- * Sistema de sobrevivência:
- *   - {@code vidas}: estoque de tanques reserva (continuar após morte)
- *   - {@code hp}:    energia do tanque atual (0–100, cada tiro causa 25 de dano)
- *   - Invencibilidade: 3 segundos após renascer, evita morte instantânea no respawn
+ * sistema de sobrevivência:
+ *  vidas estoque de tanques reserva (continuar após morte)
+ *  hp: blindagem do tanque atual (0–100, cada tiro causa 25 de dano)
+ *  invencibilidade: 3 segundos após renascer, evita morte instantânea no respawn
  *
- * Por que thread própria?
- * O professor exige uma thread por tanque. Isso separa a lógica de input
- * e movimento da renderização do game loop principal.
  */
 public class TanqueJogador extends Entidade implements Movivel, Runnable {
 
@@ -27,20 +23,14 @@ public class TanqueJogador extends Entidade implements Movivel, Runnable {
     private       Thread            threadTanque;
     private       int               contadorTiro = 0;
 
-    // =========================================================================
     // ESTADO DE SOBREVIVÊNCIA
-    // =========================================================================
-
     public int  vidas;
     public int  hp;
     public long tempoNascimento;
 
     private static final long DURACAO_INVENCIBILIDADE_MS = 3_000;
 
-    // =========================================================================
     // CONSTRUTOR
-    // =========================================================================
-
     public TanqueJogador(GamePanel gp, ManipuladorTeclas teclaH) {
         super(40, 440, 4); // Posição inicial: canto inferior esquerdo
         this.gp     = gp;
@@ -61,11 +51,8 @@ public class TanqueJogador extends Entidade implements Movivel, Runnable {
         threadTanque.start();
     }
 
-    // =========================================================================
     // ESTADO DE SOBREVIVÊNCIA
-    // =========================================================================
-
-    /** Retorna true se o jogador ainda está no período de invencibilidade pós-respawn. */
+    // retorna true se o jogador ainda está no período de invencibilidade pós-respawn
     public boolean isInvencivel() {
         return (System.currentTimeMillis() - tempoNascimento) < DURACAO_INVENCIBILIDADE_MS;
     }
@@ -75,8 +62,8 @@ public class TanqueJogador extends Entidade implements Movivel, Runnable {
     }
 
     /**
-     * Reposiciona o jogador, restaura HP e inicia o período de invencibilidade.
-     * Chamado ao renascer após uma morte.
+     * reposiciona o jogador, restaura HP e inicia o período de invencibilidade.
+     * chamado ao renascer após uma morte.
      */
     public void posicionarEmSeguranca(int novoX, int novoY) {
         this.x = novoX;
@@ -90,14 +77,12 @@ public class TanqueJogador extends Entidade implements Movivel, Runnable {
         }
     }
 
-    // =========================================================================
     // THREAD — LOOP DE MOVIMENTO
-    // =========================================================================
-
+    
     @Override
     public void run() {
         while (gp.rodando) {
-            // Só processa input durante o jogo — evita mover/atirar durante MORTE e GAMEOVER
+            // só processa input durante o jogo — evita mover/atirar durante MORTE e GAMEOVER
             if (gp.estadoJogo == gp.ESTADO_JOGANDO) {
                 mover();
             }
@@ -109,14 +94,12 @@ public class TanqueJogador extends Entidade implements Movivel, Runnable {
         }
     }
 
-    /** Movimento delegado à thread — existe apenas para cumprir o contrato de Entidade. */
+    /** movimento delegado à thread — existe apenas para cumprir o contrato de Entidade. */
     @Override
     public void atualizar() {}
 
-    // =========================================================================
     // LÓGICA DE MOVIMENTO E TIRO
-    // =========================================================================
-
+    
     @Override
     public void mover() {
         if (vidas <= 0 && hp <= 0) return;
@@ -138,7 +121,7 @@ public class TanqueJogador extends Entidade implements Movivel, Runnable {
             gp.HITBOX_TAMANHO, gp.HITBOX_TAMANHO
         );
 
-        // Look-ahead: verifica os dois cantos da frente para evitar travamento em quinas
+        // verifica os dois cantos da frente para evitar travamento em quinas
         switch (direcao) {
             case "cima" -> {
                 if (gp.gerenciadorMapa.verificarPassagem(x + MARGEM, proximoY) ||
@@ -179,9 +162,9 @@ public class TanqueJogador extends Entidade implements Movivel, Runnable {
     }
 
     /**
-     * Cria um projétil na frente do tanque na direção atual.
-     * {@code synchronized}: captura atômica de x e y para evitar race condition
-     * entre a thread do jogador e a leitura das coordenadas.
+     * cria um projétil na frente do tanque na direção atual
+     * synchronized: captura atômica de x e y para evitar race condition
+     * entre a thread do jogador e a leitura das coordenadas
      */
     private synchronized void efetuarDisparo() {
         int snapshotX = x;
@@ -209,15 +192,13 @@ public class TanqueJogador extends Entidade implements Movivel, Runnable {
         return false;
     }
 
-    // =========================================================================
     // RENDERIZAÇÃO
-    // =========================================================================
 
     @Override
     public void desenhar(Graphics2D g2) {
         if (!vivo && hp <= 0) return;
 
-        // Pisca a cada 100ms durante a invencibilidade — feedback visual ao jogador
+        // pisca a cada 100ms durante a invencibilidade — feedback visual ao jogador
         if (isInvencivel() && (System.currentTimeMillis() / 100) % 2 == 0) return;
 
         BufferedImage sprite = switch (direcao) {
@@ -233,11 +214,9 @@ public class TanqueJogador extends Entidade implements Movivel, Runnable {
         }
     }
 
-    // =========================================================================
     // SISTEMA DE ASSETS
-    // =========================================================================
-
-    /** Carrega os 4 sprites direcionais removendo o fundo branco dos BMPs. */
+    
+    /** carrega os 4 sprites direcionais removendo o fundo branco dos BMPs. */
     public void carregarSprites() {
         try {
             up    = ImageUtils.transformarTransparente(

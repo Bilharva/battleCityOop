@@ -6,24 +6,22 @@ import java.util.Collections;
 import java.util.List;
 
 /**
- * Gerencia persistência do ranking de pontuações.
+ * gerencia o ranking de pontuações
  *
- * Lê e escreve o arquivo "ranking.txt" no diretório de execução.
- * Cada linha segue o formato "NOME;PONTOS". Linhas corrompidas disparam
- * RankingException e são ignoradas individualmente sem interromper a leitura.
+ * lê e escreve o arquivo "ranking.txt" no diretório de execução
+ * cada linha segue o formato "NOME;PONTOS". Linhas corrompidas disparam
+ * rankingException e são ignoradas individualmente sem interromper a leitura
  */
 public class GerenciadorRanking {
 
     private static final String ARQUIVO_RANKING = "ranking.txt";
     private static final int    LIMITE_TOP       = 10;
 
-    // =========================================================================
     // LEITURA
-    // =========================================================================
 
     /**
-     * Carrega e retorna o ranking ordenado do arquivo.
-     * Retorna lista vazia se o arquivo não existir.
+     * carrega e retorna o ranking ordenado do arquivo
+     * retorna lista vazia se o arquivo não existir
      */
     public static List<Score> carregarRanking() {
         List<Score> lista   = new ArrayList<>();
@@ -34,7 +32,7 @@ public class GerenciadorRanking {
         try (BufferedReader reader = new BufferedReader(new FileReader(arquivo))) {
             String linha;
             while ((linha = reader.readLine()) != null) {
-                // Cada linha é tratada isoladamente — erro em uma não cancela as demais
+                // cada linha é tratada isoladamente — erro em uma não cancela as demais
                 try {
                     lista.add(parsearLinha(linha));
                 } catch (RankingException e) {
@@ -52,7 +50,7 @@ public class GerenciadorRanking {
     }
 
     /**
-     * Interpreta uma linha do arquivo e retorna um Score.
+     * interpreta uma linha do arquivo e retorna um Score.
      * @throws RankingException se a linha não estiver no formato "NOME;PONTOS".
      */
     private static Score parsearLinha(String linha) throws RankingException {
@@ -63,13 +61,11 @@ public class GerenciadorRanking {
         return new Score(partes[0], Integer.parseInt(partes[1]));
     }
 
-    // =========================================================================
     // ESCRITA
-    // =========================================================================
-
+    
     /**
-     * Adiciona um novo score ao ranking, mantendo apenas o top 10.
-     * Carrega, insere, ordena, corta e persiste em um único fluxo.
+     * adiciona um novo score ao ranking, mantendo apenas o top 10.
+     * carrega, insere, ordena, corta e persiste em um único fluxo.
      */
     public static void adicionarScore(String nome, int pontos) {
         List<Score> lista = carregarRanking();

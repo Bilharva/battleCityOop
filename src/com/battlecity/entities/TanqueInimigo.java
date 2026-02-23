@@ -10,16 +10,13 @@ import java.io.InputStream;
 import java.util.Random;
 
 /**
- * Tanque controlado por IA. Cada instância roda em thread própria.
+ * tanque controlado por IA. cada instância roda em thread própria.
  *
- * Tipos disponíveis:
+ * tipos disponíveis:
  *   0 = Normal  (cinza)    — velocidade 2, delay de tiro 240 ticks
  *   1 = Rápido  (verde)    — velocidade 4, delay de tiro 180 ticks
  *   2 = Pesado  (vermelho) — velocidade 1, delay de tiro 300 ticks
  *
- * Por que thread própria?
- * O professor exige uma thread por tanque. Isso permite que cada inimigo
- * se mova de forma autônoma, independente do game loop e dos outros tanques.
  */
 public class TanqueInimigo extends Entidade implements Movivel, Runnable {
 
@@ -30,9 +27,7 @@ public class TanqueInimigo extends Entidade implements Movivel, Runnable {
     private       int       contadorMovimento = 0;
     private       int       contadorTiro      = 0;
 
-    // =========================================================================
     // CONSTRUTOR
-    // =========================================================================
 
     public TanqueInimigo(GamePanel gp, int x, int y, int tipo) {
         super(x, y, 2);
@@ -41,39 +36,37 @@ public class TanqueInimigo extends Entidade implements Movivel, Runnable {
         this.direcao     = "baixo";
 
         this.velocidade = switch (tipo) {
-            case 1  -> 4; // Rápido
-            case 2  -> 1; // Pesado
-            default -> 2; // Normal
+            case 1  -> 4; // rapido
+            case 2  -> 1; // pesado
+            default -> 2; // normal
         };
 
         carregarImagens();
         this.hitbox.setBounds(x + gp.HITBOX_MARGEM, y + gp.HITBOX_MARGEM,
                               gp.HITBOX_TAMANHO, gp.HITBOX_TAMANHO);
 
-        // Thread criada mas NÃO iniciada aqui — GamePanel.iniciarFase() chama
+        // Thread criada mas não iniciada aqui — GamePanel.iniciarFase() chama
         // iniciarThread() após todos os inimigos serem posicionados, evitando
-        // que threads comecem a mover inimigos antes do spawn estar completo.
+        // que threads comecem a mover inimigos antes do spawn estar completo
         threadInimigo = new Thread(this);
         threadInimigo.setDaemon(true);
     }
 
-    /** Inicia o movimento do tanque. Deve ser chamado após todos os spawns da fase. */
+    /** Inicia o movimento do tanque. deve ser chamado após todos os spawns da fase. */
     public void iniciarThread() {
         if (!threadInimigo.isAlive()) {
             threadInimigo.start();
         }
     }
 
-    // =========================================================================
     // SISTEMA DE ASSETS
-    // =========================================================================
 
     private void carregarImagens() {
-        // Sprites do tipo Normal — usados também como fallback para tipos sem asset
+        // sprites do tipo Normal — usados também como fallback para tipos sem asset
         String spriteCima     = "/imagens/b1_enemUp.bmp";
         String spriteBaixo    = "/imagens/b1_enemDown.bmp";
         String spriteEsquerda = "/imagens/b1_enemLeft.bmp";
-        String spriteDireita  = "/imagens/b1_enemRigth.bmp"; // Typo intencional: nome do asset original
+        String spriteDireita  = "/imagens/b1_enemRigth.bmp";
 
         if (tipoInimigo == 1) {
             spriteCima     = "/imagens/verdeCima.bmp";
@@ -94,8 +87,8 @@ public class TanqueInimigo extends Entidade implements Movivel, Runnable {
     }
 
     /**
-     * Tenta carregar o sprite do tipo específico; usa o sprite Normal como fallback.
-     * Remove o fundo preto com tolerância de cor para suavizar bordas dos BMPs.
+     * tenta carregar o sprite do tipo específico; usa o sprite normal como fallback.
+     * remove o fundo preto com tolerância de cor para suavizar bordas dos BMPs.
      */
     private BufferedImage carregarImagemComFallback(String principal, String fallback) {
         try {
@@ -108,10 +101,7 @@ public class TanqueInimigo extends Entidade implements Movivel, Runnable {
         return null;
     }
 
-    // =========================================================================
     // THREAD — LOOP DE MOVIMENTO
-    // =========================================================================
-
     /**
      * Loop principal da thread do inimigo.
      *
@@ -139,30 +129,28 @@ public class TanqueInimigo extends Entidade implements Movivel, Runnable {
         }
     }
 
-    /** Movimento delegado à thread — existe apenas para cumprir o contrato de Entidade. */
+    /** movimento delegado à thread — existe apenas para cumprir o contrato de Entidade. */
     @Override
     public void atualizar() {}
 
-    // =========================================================================
     // IA DE MOVIMENTO
-    // =========================================================================
 
     @Override
     public void mover() {
         contadorMovimento++;
         contadorTiro++;
 
-        if (contadorMovimento > 120) sortearNovaDirecao(); // Muda de direção a cada ~2 segundos
+        if (contadorMovimento > 120) sortearNovaDirecao(); // muda de direção a cada ~2 segundos
 
         int     proximoX = x;
         int     proximoY = y;
         boolean colidiu  = false;
 
-        // Margem de 5px nas bordas do tanque evita que ele raspe em quinas e trave
+        // margem de 5px nas bordas do tanque evita que ele raspe em quinas e trave
         final int MARGEM       = 5;
         final int LARGURA_UTIL = 40 - (MARGEM * 2);
 
-        // Look-ahead: verifica os dois cantos da frente antes de mover
+        // verifica os dois cantos da frente antes de mover
         switch (direcao) {
             case "cima" -> {
                 proximoY -= velocidade;
@@ -228,21 +216,19 @@ public class TanqueInimigo extends Entidade implements Movivel, Runnable {
         contadorMovimento = 0;
     }
 
-    // =========================================================================
     // LÓGICA DE TIRO
-    // =========================================================================
 
     /**
-     * Dispara após um delay mínimo por tipo, com 3% de chance por tick.
-     * O delay variável por tipo diferencia o comportamento de cada inimigo.
+     * dispara após um delay mínimo por tipo, com 3% de chance por tick
+     * O delay variável por tipo diferencia o comportamento de cada inimigo
      */
     private void detectarEAtirar() {
         if (!vivo) return;
 
         int delayMinimo = switch (tipoInimigo) {
-            case 1  -> 180; // Rápido: atira com mais frequência
-            case 2  -> 300; // Pesado: atira com menos frequência
-            default -> 240; // Normal
+            case 1  -> 180; // rápido: atira com mais frequência
+            case 2  -> 300; // pesado: atira com menos frequência
+            default -> 240; // normal
         };
 
         if (contadorTiro > delayMinimo && random.nextInt(100) > 97) {
@@ -251,20 +237,20 @@ public class TanqueInimigo extends Entidade implements Movivel, Runnable {
     }
 
     /**
-     * Cria um projétil na posição correta para a direção atual.
+     * cria um projétil na posição correta para a direção atual.
      *
-     * Por que {@code synchronized}?
-     * Garante que x e y são lidos atomicamente. Sem isso, a thread poderia
+     * pq synchronized
+     * garante que x e y são lidos atomicamente. sem isso, a thread poderia
      * ler x e y em estados diferentes de um mesmo movimento, gerando projéteis
-     * em coordenadas inválidas ("tiro fantasma").
+     * em coordenadas inválidas ("tiro fantasma")
      *
-     * Limite de 1 projétil ativo por tanque: fiel ao Battle City original e
+     * limite de 1 projétil ativo por tanque: fiel ao Battle City original e
      * evita acúmulo de threads em dificuldade alta.
      */
     private synchronized void efetuarDisparo() {
         if (!vivo) return;
 
-        // Cancela se este tanque já tem uma bala ativa na tela
+        // cancela se este tanque já tem uma bala ativa na tela
         for (Projetil projetil : gp.projeteis) {
             if (projetil.origem == this && projetil.isAtivo()) return;
         }
@@ -294,10 +280,8 @@ public class TanqueInimigo extends Entidade implements Movivel, Runnable {
         contadorTiro = 0;
     }
 
-    // =========================================================================
     // RENDERIZAÇÃO
-    // =========================================================================
-
+    
     @Override
     public void desenhar(Graphics2D g2) {
         BufferedImage sprite = switch (direcao) {
@@ -311,7 +295,7 @@ public class TanqueInimigo extends Entidade implements Movivel, Runnable {
         if (sprite != null) {
             g2.drawImage(sprite, x, y, gp.TAMANHO_BLOCO, gp.TAMANHO_BLOCO, null);
         } else {
-            // Fallback visual caso o asset não seja carregado
+            // fallback visual caso o asset não seja carregado
             g2.setColor(Color.RED);
             g2.fillRect(x, y, 40, 40);
         }

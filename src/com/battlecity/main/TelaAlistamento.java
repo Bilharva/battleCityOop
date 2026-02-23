@@ -4,8 +4,8 @@ import javax.swing.*;
 import java.awt.*;
 
 /**
- * Tela de alistamento: jogador informa nome e escolhe a dificuldade antes de iniciar.
- * Valida que o nome não está vazio antes de permitir o início da partida.
+ * tela de alistamento: jogador informa nome e escolhe a dificuldade antes de iniciar.
+ * valida que o nome não está vazio antes de permitir o início da partida.
  */
 public class TelaAlistamento extends JPanel {
 
@@ -72,8 +72,8 @@ public class TelaAlistamento extends JPanel {
     }
 
     /**
-     * Valida o nome e inicia o jogo, ou exibe alerta se o campo estiver vazio.
-     * getSelectedIndex() retorna 0=Fácil, 1=Médio, 2=Difícil — mapeado diretamente no GamePanel.
+     * valida o nome e inicia o jogo, ou exibe alerta se o campo estiver vazio
+     * getSelectedIndex() retorna 0=Fácil, 1=Médio, 2=Difícil — mapeado diretamente no GamePanel
      */
     private void tentarIniciarJogo() {
         String nome = campoNome.getText().trim().toUpperCase();

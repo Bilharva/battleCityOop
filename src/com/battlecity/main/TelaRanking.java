@@ -7,16 +7,16 @@ import javax.swing.*;
 public class TelaRanking extends JPanel {
 
     Main main;
-    private final List<Score> lista; // Carregado uma vez no construtor — evita I/O a cada repaint
+    private final List<Score> lista; // carregado uma vez no construtor — evita I/O a cada repaint
 
     public TelaRanking(Main main) {
         this.main  = main;
-        this.lista = GerenciadorRanking.carregarRanking(); // Leitura de arquivo feita aqui, uma única vez
+        this.lista = GerenciadorRanking.carregarRanking(); // leitura de arquivo feita aqui, uma única vez
         this.setBackground(Color.BLACK);
         this.setLayout(null);
         this.setPreferredSize(new Dimension(720, 520));
 
-        // Título
+        // título
         JLabel titulo = new JLabel("TOP 10 JOGADORES");
         titulo.setFont(new Font("Monospaced", Font.BOLD, 40));
         titulo.setForeground(Color.YELLOW);
@@ -24,7 +24,7 @@ public class TelaRanking extends JPanel {
         titulo.setHorizontalAlignment(SwingConstants.CENTER);
         this.add(titulo);
 
-        // Botão Voltar
+        // botão Voltar
         JButton btnVoltar = new JButton("VOLTAR AO MENU");
         btnVoltar.setBounds(260, 450, 200, 40);
         btnVoltar.setBackground(Color.DARK_GRAY);
@@ -34,27 +34,27 @@ public class TelaRanking extends JPanel {
         this.add(btnVoltar);
     }
 
-    // Usamos paintComponent para desenhar a lista bonita
+    // paintComponent para desenhar a lista bonita
     @Override
     protected void paintComponent(Graphics g) {
         super.paintComponent(g);
         Graphics2D g2 = (Graphics2D) g;
         
-        // 'lista' já foi carregada no construtor — sem I/O aqui
+        // 'lista' já foi carregada no construtor sem I/O aqui
         
         g2.setFont(new Font("Monospaced", Font.BOLD, 20));
         int y = 120;
         int i = 1;
 
-        // Cabeçalho
+        // cabeçalho
         g2.setColor(Color.GRAY);
         g2.drawString("POS   NOME                PONTOS", 150, 100);
         g2.drawLine(150, 105, 570, 105);
 
         for (Score s : lista) {
-            if (i == 1) g2.setColor(Color.ORANGE); // 1º Lugar Ouro
-            else if (i == 2) g2.setColor(Color.LIGHT_GRAY); // 2º Prata
-            else if (i == 3) g2.setColor(new Color(205, 127, 50)); // 3º Bronze
+            if (i == 1) g2.setColor(Color.ORANGE); // 1º lugar Ouro
+            else if (i == 2) g2.setColor(Color.LIGHT_GRAY); // 2º prata
+            else if (i == 3) g2.setColor(new Color(205, 127, 50)); // 3º bronze
             else g2.setColor(Color.WHITE);
 
             String linha = String.format("%-5d %-20s %06d", i, s.getNome(), s.getPontos());

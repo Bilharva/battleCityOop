@@ -4,18 +4,14 @@ import com.battlecity.main.GamePanel;
 import java.awt.*;
 
 /**
- * Projétil disparado por tanques. Cada instância roda em thread própria.
  *
- * Divisão de responsabilidade de colisão:
- *   - {@code Projetil}: detecta colisão com tiles do cenário (paredes, aço, base).
- *   - {@code GamePanel}: detecta colisão com entidades (inimigos, jogador).
+ * divisão de responsabilidade de colisão:
+ *   -Projetil detecta colisão com tiles do cenário (paredes, aço, base).
+ *   - GamePanel: detecta colisão com entidades (inimigos, jogador).
  *
- * Por que thread própria?
- * O professor exige uma thread por projétil. Isso permite que cada bala
- * se mova de forma independente e contínua sem bloquear o game loop principal.
  *
- * Nota sobre o tile 2 (Base/Águia): ao tocar a base, o projétil apenas para.
- * O Game Over é responsabilidade exclusiva de {@code GamePanel.verificarColisoes()}.
+ * nota sobre o tile 2 base ao tocar a base, o projétil apenas para.
+ * O Game Over é responsabilidade exclusiva do GamePanel.verificarColisoes()}.
  */
 public class Projetil extends Entidade implements Movivel, Runnable {
 
@@ -24,26 +20,24 @@ public class Projetil extends Entidade implements Movivel, Runnable {
     /** volatile: garante visibilidade imediata entre threads sem necessidade de synchronized. */
     public volatile boolean ativo = true;
 
-    /** Referência a quem disparou — usada para evitar fogo amigo nas colisões. */
+    /** referência a quem disparou — usada para evitar fogo amigo nas colisões. */
     public final Entidade origem;
 
-    // =========================================================================
     // CONSTRUTOR
-    // =========================================================================
 
     public Projetil(GamePanel gp, int x, int y, String direcao, Entidade origem) {
-        super(x, y, 7); // Velocidade 7px por tick — maior que os tanques (2–4px)
+        super(x, y, 7); // velocidade 7px por tick — maior que os tanques (2–4px)
         this.gp      = gp;
         this.direcao = direcao;
         this.origem  = origem;
-        this.hitbox  = new Rectangle(x, y, 10, 10); // Hitbox pequena para precisão de colisão
+        this.hitbox  = new Rectangle(x, y, 10, 10); // hitbox pequena para precisão de colisão
 
         new Thread(this).start();
     }
 
-    // =========================================================================
+
     // THREAD — LOOP DE MOVIMENTO
-    // =========================================================================
+
 
     @Override
     public void run() {
@@ -52,18 +46,17 @@ public class Projetil extends Entidade implements Movivel, Runnable {
                 mover();
             }
             try {
-                Thread.sleep(10); // Intervalo menor que tanques (16ms) = projétil mais rápido
+                Thread.sleep(10); // intervalo menor que tanques (16ms) = projétil mais rápido
             } catch (InterruptedException e) {
                 Thread.currentThread().interrupt();
                 break;
             }
         }
-        ativo = false; // Garante estado consistente ao sair do loop por qualquer motivo
+        ativo = false; // garante estado consistente ao sair do loop por qualquer motivo
     }
 
-    // =========================================================================
-    // MOVIMENTO E COLISÃO COM CENÁRIO
-    // =========================================================================
+    
+    // movimento de colisão no cenário
 
     @Override
     public void mover() {
@@ -83,11 +76,11 @@ public class Projetil extends Entidade implements Movivel, Runnable {
     }
 
     /**
-     * Verifica colisão com tiles do mapa na posição atual do projétil.
+     * verifica colisão com tiles do mapa na posição atual do projétil
      *
-     * Tile 1 (tijolo) → destrói o tile e desativa o projétil.
-     * Tile 4 (aço)    → projétil para; tile é indestrutível.
-     * Tile 2 (base)   → projétil para; Game Over tratado pelo GamePanel.
+     * Tile 1 (tijolo) → destrói o tile e desativa o projétil
+     * Tile 4 (aço)    → projétil para; tile é indestrutível
+     * Tile 2 (base)   → projétil para; Game Over tratado pelo GamePanel
      */
     private void verificarColisaoCenario() {
         int col = (x + 5) / gp.TAMANHO_BLOCO;
@@ -104,14 +97,12 @@ public class Projetil extends Entidade implements Movivel, Runnable {
         }
     }
 
-    // =========================================================================
     // GETTERS E RENDERIZAÇÃO
-    // =========================================================================
 
     public boolean isAtivo()                  { return ativo; }
     public void    setAtivo(boolean ativo)    { this.ativo = ativo; }
 
-    /** Movimento delegado à thread — este método existe apenas para cumprir o contrato de Entidade. */
+    /** movimento delegado à thread — este método existe apenas para cumprir o contrato de Entidade. */
     @Override public void atualizar() {}
 
     @Override

@@ -4,8 +4,8 @@ import javax.swing.*;
 import java.awt.*;
 
 /**
- * Tela inicial do jogo com navegação para Play, Ranking e Sair.
- * Layout gerenciado por GridBagLayout para centralização responsiva.
+ * tela inicial do jogo com navegação para Play, Ranking e Sair
+ * layout gerenciado por GridBagLayout para centralização responsiva
  */
 public class MenuPrincipal extends JPanel {
 
@@ -48,8 +48,8 @@ public class MenuPrincipal extends JPanel {
     }
 
     /**
-     * Aplica estilo visual arcade consistente e efeito de hover nos botões do menu.
-     * Centralizar aqui garante identidade visual uniforme sem repetição.
+     * aplica estilo visual arcade consistente e efeito de hover nos botões do menu
+     * centralizar aqui garante identidade visual uniforme sem repetição
      */
     private void estilizarBotao(JButton botao) {
         botao.setFont(new Font("Monospaced", Font.BOLD, 22));

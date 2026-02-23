@@ -15,64 +15,52 @@ import java.util.Random;
 import java.util.concurrent.CopyOnWriteArrayList;
 
 /**
- * GamePanel — Motor central do jogo (Game Loop + Física + Renderização).
+ * GamePanel — motor central do jogo (game Loop + física e renderização)
  *
- * Responsabilidades:
- *   - Executar o game loop a 60 FPS via Thread (implements Runnable)
- *   - Gerenciar o ciclo de vida das fases (iniciar, reiniciar, concluir)
- *   - Detectar e resolver colisões entre todas as entidades
- *   - Renderizar o mundo em camadas (fundo → entidades → HUD → overlays)
+ * responsabilidades:
+ *   - executar o game loop a 60 FPS via Thread (implements Runnable)
+ *   - gerenciar o ciclo de vida das fases (iniciar, reiniciar, concluir)
+ *   - detectar e resolver colisões entre todas as entidades
+ *   - renderizar o mundo em camadas (fundo → entidades → HUD → overlays)
  *
- * Nota de design: esta classe concentra muitas responsabilidades por ser o
- * ponto de integração do jogo. Em um projeto maior, seria dividida em
- * subcomponentes (FisicaEngine, RenderEngine, etc.).
  */
 public class GamePanel extends JPanel implements Runnable {
 
-    // =========================================================================
     // CONSTANTES DE GEOMETRIA
-    // =========================================================================
 
-    public final int TAMANHO_BLOCO = 40;              // Tamanho de cada tile em pixels
-    public final int COLUNAS       = 13;              // Largura do mapa em tiles
-    public final int LINHAS        = 13;              // Altura do mapa em tiles
+    public final int TAMANHO_BLOCO = 40;              // tamanho de cada tile em pixels
+    public final int COLUNAS       = 13;              // largura do mapa em tiles
+    public final int LINHAS        = 13;              // altura do mapa em tiles
     public final int LARGURA_MAPA  = TAMANHO_BLOCO * COLUNAS;
     public final int ALTURA_MAPA   = TAMANHO_BLOCO * LINHAS;
     public final int LARGURA_HUD   = 200;             // Painel lateral de informações
     public final int LARGURA_TELA  = LARGURA_MAPA + LARGURA_HUD;
     public final int ALTURA_TELA   = ALTURA_MAPA;
 
-    // =========================================================================
     // CONSTANTES DE GAMEPLAY
-    // =========================================================================
-
-    /** Hitbox 2px menor que o sprite evita o tanque travar em quinas de paredes. */
+   
+    /** hitbox 2px menor que o sprite evita o tanque travar em quinas de paredes */
     public final int HITBOX_TAMANHO  = 36;
     public final int HITBOX_MARGEM   = 2;
 
-    /** HP começa em 100. Cada tiro causa 25 de dano → 4 tiros = morte. */
+    /** HP começa em 100. cada tiro causa 25 de dano → 4 tiros = morte. */
     public final int HP_MAXIMO       = 100;
     public final int DANO_TIRO       = 25;
 
-    public final int PONTOS_POR_KILL = 100;  // Pontos ganhos ao destruir um inimigo
-    public final int THREAD_SLEEP_MS = 16;   // ~60fps para threads dos tanques
+    public final int PONTOS_POR_KILL = 100;  // pontos ganhos ao destruir um inimigo
+    public final int THREAD_SLEEP_MS = 16;   // 60fps para threads dos tanques
 
-    // =========================================================================
     // ESTADOS DO JOGO — máquina de estados usada em atualizar()
-    // =========================================================================
-
+    
     public final int ESTADO_JOGANDO  = 1;
     public final int ESTADO_PAUSADO  = 2;
     public final int ESTADO_MORTE    = 3;
     public final int ESTADO_GAMEOVER = 4;
     public final int ESTADO_VITORIA  = 5;
 
-    // =========================================================================
     // MOTOR DO GAME LOOP
-    // =========================================================================
-
     /**
-     * Nanosegundos por segundo — usado no cálculo do intervalo do game loop.
+     * nanossegundos por segundo — usado no cálculo do intervalo do game loop.
      * intervalo = NANO_POR_SEGUNDO / FPS
      */
     private static final double NANO_POR_SEGUNDO = 1_000_000_000.0;
@@ -81,21 +69,16 @@ public class GamePanel extends JPanel implements Runnable {
     private Thread  gameThread;
     public  boolean rodando = false;
 
-    // =========================================================================
     // DEPENDÊNCIAS E SISTEMAS
-    // =========================================================================
-
+    
     private final Main             main;
     public        ManipuladorTeclas teclaH         = new ManipuladorTeclas();
     public        GerenciadorMapa   gerenciadorMapa;
 
-    /** Instância compartilhada — evitar criar um new Random() por frame. */
+    /** instância compartilhada  evitar criar um new Random() por frame */
     private final Random random = new Random();
 
-    // =========================================================================
     // DADOS DA SESSÃO DE JOGO
-    // =========================================================================
-
     public String  nomeJogador;
     public int     dificuldade;        // 0 = Fácil | 1 = Médio | 2 = Difícil
     public int     pontuacaoTotal  = 0;
@@ -107,29 +90,22 @@ public class GamePanel extends JPanel implements Runnable {
     public  int     totalInimigosFase = 10;
     public  int     inimigosMortos    = 0;
 
-    // =========================================================================
     // ESTADO DA UI / PAUSA
-    // =========================================================================
-
     public  int     estadoJogo;
     public  int     comandoNum = 0;    // Índice da opção selecionada no menu de pausa
     private boolean escTrava   = false; // Evita que ESC alterne infinitamente
 
-    // =========================================================================
     // ASSETS DE OVERLAY
-    // =========================================================================
-
+    
     private BufferedImage imgAvisoMorte, imgGameOver, imgWon;
     private BufferedImage hudImagemVida;
 
-    // =========================================================================
     // ENTIDADES DO MUNDO
-    // =========================================================================
-
+    
     /**
      * CopyOnWriteArrayList: thread-safe para iteração simultânea por múltiplas
-     * threads (game loop + threads de tanques + threads de projéteis).
-     * Custo: cópia a cada escrita — aceitável dado o tamanho pequeno das listas.
+     * threads (game loop + threads de tanques + threads de projéteis)
+     * custo: cópia a cada escrita — aceitável dado o tamanho pequeno das listas
      */
     public TanqueJogador       jogador;
     public List<TanqueInimigo> listaInimigos = new CopyOnWriteArrayList<>();
@@ -137,19 +113,17 @@ public class GamePanel extends JPanel implements Runnable {
     public List<PowerUp>       powerUps      = new CopyOnWriteArrayList<>();
     public List<Explosao>      explosoes     = new CopyOnWriteArrayList<>();
 
-    // =========================================================================
     // CONSTRUTOR
-    // =========================================================================
 
     public GamePanel(Main main, String nome, int dificuldade) {
         this.main        = main;
         this.nomeJogador = (nome == null || nome.isEmpty()) ? "RECRUTA" : nome;
         this.dificuldade = dificuldade;
 
-        // Configuração do painel Swing
+        // configuração do painel Swing
         this.setPreferredSize(new Dimension(LARGURA_TELA, ALTURA_TELA));
         this.setBackground(Color.BLACK);
-        this.setDoubleBuffered(true); // Elimina flickering durante repaint()
+        this.setDoubleBuffered(true); // elimina flickering durante repaint()
         this.addKeyListener(teclaH);
         this.setFocusable(true);
         this.requestFocus();
@@ -162,17 +136,15 @@ public class GamePanel extends JPanel implements Runnable {
         this.estadoJogo      = ESTADO_JOGANDO;
 
         // rodando=true antes de iniciarFase() garante que as threads dos
-        // TanqueInimigo criadas dentro de iniciarFase() já encontrem o jogo ativo.
+        // TanqueInimigo criadas dentro de iniciarFase() já encontrem o jogo ativo
         rodando = true;
         iniciarFase();
         iniciarThreadJogo();
     }
 
-    // =========================================================================
     // CICLO DE VIDA DAS FASES
-    // =========================================================================
-
-    /** Reinicia o jogo do zero: fase 1, pontuação zerada, 5 vidas. */
+    
+    /** reiinicia o jogo do zero: fase 1, pontuação zerada, 5 vidas */
     public void reiniciarJogoCompleto() {
         faseAtual      = 1;
         pontuacaoTotal = 0;
@@ -186,7 +158,7 @@ public class GamePanel extends JPanel implements Runnable {
         iniciarFase();
     }
 
-    /** Reinicia a fase atual mantendo pontuação total e número de vidas. */
+    /** reinicia a fase atual mantendo pontuação total e número de vidas. */
     public void reiniciarFaseAtual() {
         pontuacaoFase = 0;
 
@@ -198,8 +170,8 @@ public class GamePanel extends JPanel implements Runnable {
     }
 
     /**
-     * Chamado quando todos os inimigos da fase foram destruídos.
-     * Calcula bônus, avança a fase ou aciona tela de vitória.
+     * chamado quando todos os inimigos da fase foram destruídos.
+     * calcula bônus, avança a fase ou aciona tela de vitória.
      */
     private void concluirMissao() {
         calcularBonusFimDeFase();
@@ -208,7 +180,7 @@ public class GamePanel extends JPanel implements Runnable {
         if (faseAtual <= MAX_FASES) {
             iniciarFase();
         } else {
-            // Todas as fases concluídas: salva score e exibe vitória
+            // todas as fases concluídas: salva score e exibe vitória
             estadoJogo = ESTADO_VITORIA;
             if (!scoreSalvo) {
                 GerenciadorRanking.adicionarScore(nomeJogador, pontuacaoTotal);
@@ -218,24 +190,24 @@ public class GamePanel extends JPanel implements Runnable {
     }
 
     /**
-     * Prepara o estado completo de uma fase:
-     *   1. Define quantidade de inimigos por dificuldade
-     *   2. Mata threads dos inimigos antigos antes de limpar as listas
-     *   3. Recarrega o mapa
-     *   4. Reposiciona jogador e spawna novos inimigos
+     * prepara o estado completo de uma fase:
+     *   1. define quantidade de inimigos por dificuldade
+     *   2. mata threads dos inimigos antigos antes de limpar as listas
+     *   3. recarrega o mapa
+     *   4. reposiciona jogador e spawna novos inimigos
      */
     public void iniciarFase() {
         inimigosMortos = 0;
 
         totalInimigosFase = switch (dificuldade) {
-            case 0  -> 6  + (faseAtual * 2);  // Fácil
-            case 1  -> 10 + (faseAtual * 2);  // Médio
-            default -> 14 + (faseAtual * 2);  // Difícil
+            case 0  -> 6  + (faseAtual * 2);  // fácil
+            case 1  -> 10 + (faseAtual * 2);  // médio
+            default -> 14 + (faseAtual * 2);  // difícil
         };
 
-        // setVivo(false) encerra o while(vivo) de cada thread antes do clear().
-        // Sem isso, threads antigas continuariam rodando em background e
-        // disparando de posições inválidas ("tiro fantasma").
+        // setVivo(false) encerra o while(vivo) de cada thread antes do clear()
+        // sem isso, threads antigas continuariam rodando em background e
+        // disparando de posições inválidas ("tiro fantasma")
         for (TanqueInimigo inimigo : listaInimigos) inimigo.setVivo(false);
 
         projeteis.clear();
@@ -245,7 +217,7 @@ public class GamePanel extends JPanel implements Runnable {
 
         gerenciadorMapa.carregarFase(faseAtual);
 
-        // Reposiciona jogador com invencibilidade temporária de 3 segundos
+        // reposiciona jogador com invencibilidade temporária de 3 segundos
         int[] coordJogador = gerenciadorMapa.encontrarEspacoVazio(false);
         if (jogador != null) {
             jogador.posicionarEmSeguranca(coordJogador[0], coordJogador[1]);
@@ -253,9 +225,9 @@ public class GamePanel extends JPanel implements Runnable {
             jogador.hp = HP_MAXIMO;
         }
 
-        // Spawna inimigos com tipo variando por dificuldade.
-        // posicoesUsadas guarda os spawns já alocados neste loop — independente
-        // de onde as threads já moveram os inimigos anteriores.
+        // cria inimigos com tipo variando por dificuldade
+        // posicoesUsadas guarda os spawns já alocados neste loop independente
+        // de onde as threads já moveram os inimigos anteriores
         java.util.Set<Long> posicoesUsadas = new java.util.HashSet<>();
         for (int i = 0; i < totalInimigosFase; i++) {
             int[] coordInimigo = encontrarLugarAleatorio(posicoesUsadas);
@@ -268,24 +240,21 @@ public class GamePanel extends JPanel implements Runnable {
             listaInimigos.add(new TanqueInimigo(this, coordInimigo[0], coordInimigo[1], tipo));
         }
 
-        // Só inicia as threads após TODOS os inimigos estarem posicionados.
-        // Evita que threads dos primeiros inimigos os movam antes dos últimos serem spawnados,
-        // o que causava sobreposição de tanques no início da fase.
+        // só inicia as threads após TODOS os inimigos estarem posicionados
+        // evita que threads dos primeiros inimigos os movam antes dos últimos serem spawnados,
+        // o que causava sobreposição de tanques no início da fase
         for (TanqueInimigo inimigo : listaInimigos) {
             inimigo.iniciarThread();
         }
     }
 
-    // =========================================================================
     // GAME LOOP — ATUALIZAÇÃO
-    // =========================================================================
-
     /**
-     * Máquina de estados principal — chamada a cada frame pelo game loop.
-     * Roteia para o comportamento correto baseado no estado atual do jogo.
+     * máquina de estados principal — chamada a cada frame pelo game loop.
+     * roteia para o comportamento correto baseado no estado atual do jogo.
      */
     public void atualizar() {
-        // Alternância ESC com trava para evitar toggle rápido involuntário
+        // alternância ESC com trava para evitar toggle rápido involuntário
         if (teclaH.esc && estadoJogo == ESTADO_JOGANDO && !escTrava) {
             estadoJogo = ESTADO_PAUSADO;
             escTrava   = true;
@@ -321,7 +290,7 @@ public class GamePanel extends JPanel implements Runnable {
     }
 
     /**
-     * Atualiza entidades e física durante ESTADO_JOGANDO.
+     * atualiza entidades e física durante ESTADO_JOGANDO.
      * TanqueInimigo não é atualizado aqui — cada um tem sua própria thread.
      */
     private void atualizarMundo() {
@@ -336,15 +305,13 @@ public class GamePanel extends JPanel implements Runnable {
         verificarColisoes();
     }
 
-    // =========================================================================
     // DETECÇÃO DE COLISÕES
-    // =========================================================================
-
+    
     /**
-     * Verifica todas as colisões relevantes a cada frame.
+     * verifica todas as colisões relevantes a cada frame
      *
      * A ORDEM IMPORTA:
-     *   1. Base (Águia) — verificada ANTES do isAtivo() pq Projetil pode
+     *   1. Base verificada ANTES do isAtivo() pq Projetil pode
      *      ser desativado por verificarColisaoCenario() ao tocar o tile 2, mas
      *      só o GamePanel pode acionar o Game Over. Checar isAtivo() primeiro
      *      faria o projétil ser ignorado antes de verificar a base.
@@ -358,7 +325,7 @@ public class GamePanel extends JPanel implements Runnable {
 
         for (Projetil projetil : projeteis) {
 
-            // 1. COLISÃO COM A BASE (Águia) — game over se destruída
+            // 1. COLISÃO COM A BASE (Águia) --> game over se destruída
             Rectangle baseHitbox = new Rectangle(6 * TAMANHO_BLOCO, 12 * TAMANHO_BLOCO, TAMANHO_BLOCO, TAMANHO_BLOCO);
             if (projetil.hitbox.intersects(baseHitbox)) {
                 projetil.setAtivo(false);
@@ -392,7 +359,7 @@ public class GamePanel extends JPanel implements Runnable {
                         }
 
                     } else if (projetil.origem != inimigo && projetil.origem != jogador) {
-                        // Fogo amigo: projétil de inimigo A atingiu inimigo B — cancela projétil
+                        // fratricídio projétil de inimigo A atingiu inimigo B — cancela projétil
                         projetil.setAtivo(false);
                     }
                 }
@@ -427,21 +394,18 @@ public class GamePanel extends JPanel implements Runnable {
             }
         }
 
-        // Remove projéteis inativos de uma só vez — CopyOnWriteArrayList é thread-safe
+        // remove projéteis inativos de uma só vez — CopyOnWriteArrayList é thread-safe
         projeteis.removeIf(p -> !p.isAtivo());
     }
 
-    // =========================================================================
     // RENDERIZAÇÃO
-    // =========================================================================
-
     /**
-     * Renderiza o mundo em ordem de camadas (Painter's Algorithm):
-     *   1. Camada baixo : cenário de fundo + tiles de chão e paredes
-     *   2. Entidades    : jogador, inimigos, projéteis, power-ups, explosões
-     *   3. Camada topo  : grama — desenhada por cima dos tanques
-     *   4. HUD          : painel lateral com informações da partida
-     *   5. Overlays     : pausa, morte, game over, vitória
+     * renderiza o mundo em ordem de camadas (Painter's Algorithm):
+     *   1. camada baixo 	: cenário de fundo + tiles de chão e paredes
+     *   2. Entidades    	: jogador, inimigos, projéteis, power-ups, explosões
+     *   3. camada topo  	: grama — desenhada por cima dos tanques
+     *   4. HUD          	: painel lateral com informações da partida
+     *   5. estados de jogo : pausa, morte, game over, vitória
      */
     @Override
     protected void paintComponent(Graphics g) {
@@ -458,7 +422,7 @@ public class GamePanel extends JPanel implements Runnable {
         for (Explosao      explosao : explosoes)     explosao.desenhar(g2);
         gerenciadorMapa.desenharCamadaTopo(g2);
 
-        // Interface e overlays
+        // interface e estados de jogo
         desenharHUD(g2);
         if (estadoJogo == ESTADO_PAUSADO)  desenharTelaPausa(g2);
         if (estadoJogo == ESTADO_MORTE)    desenharOverlayDerrota(g2, imgAvisoMorte, "ENTER para Tentar de Novo");
@@ -468,7 +432,7 @@ public class GamePanel extends JPanel implements Runnable {
         g2.dispose();
     }
 
-    /** Painel lateral com nome, score, dificuldade, barra de HP, vidas, inimigos restantes e fase. */
+    /** painel lateral com nome, score, dificuldade, barra de HP, vidas, inimigos restantes e fase */
     public void desenharHUD(Graphics2D g2) {
         g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
         g2.setRenderingHint(RenderingHints.KEY_TEXT_ANTIALIASING, RenderingHints.VALUE_TEXT_ANTIALIAS_ON);
@@ -478,22 +442,22 @@ public class GamePanel extends JPanel implements Runnable {
         final int H      = ALTURA_TELA;
         final int PAD    = 14;
         final int CX     = X + PAD;                  // X base do conteúdo
-        final int CW     = W - PAD * 2;              // Largura útil do conteúdo
+        final int CW     = W - PAD * 2;              // largura útil do conteúdo
 
-        // ── Fundo escuro ─────────────────────────────────────────────────────
+        // ── fundo escuro ─────────────────────────────────────────────────────
         g2.setColor(new Color(18, 20, 28));
         g2.fillRect(X, 0, W, H);
 
-        // Borda lateral esquerda laranja
+        // borda lateral esquerda laranja
         g2.setColor(new Color(220, 120, 20));
         g2.setStroke(new BasicStroke(3));
         g2.drawLine(X + 2, 0, X + 2, H);
         g2.setStroke(new BasicStroke(1));
 
-        // ── Helper: divisor fino ─────────────────────────────────────────────
+        // ── helper: divisor fino
         // (usado inline abaixo com g2.fillRect)
 
-        // ── SEÇÃO: Cabeçalho (jogador + score + modo) ─────────────────────
+        // cabeçalho (jogador + score + modo) 
         int y = 18;
 
         // label "JOGADOR"
@@ -532,7 +496,7 @@ public class GamePanel extends JPanel implements Runnable {
         g2.fillRect(CX, y, CW, 1);
         y += 10;
 
-        //lindagem (HP)
+        // blindagem (HP)
         g2.setFont(new Font("Monospaced", Font.PLAIN, 10));
         g2.setColor(new Color(140, 140, 160));
         g2.drawString("BLINDAGEM", CX, y);
@@ -735,16 +699,16 @@ public class GamePanel extends JPanel implements Runnable {
     // AUXILIARES DE SPAWN
     
     /**
-     * Encontra coordenadas de pixel seguras para spawnar um inimigo.
-     * Tenta 500 posições aleatórias antes de fazer varredura linear (fallback).
-     * Exclui as últimas 3 linhas do mapa (área da base do jogador).
-     * @param posicoesUsadas Posições já reservadas neste ciclo de spawn — evita sobreposição.
+     * encontra coordenadas de pixel seguras para spawnar um inimigo.
+     * tenta 500 posições aleatórias antes de fazer varredura linear (fallback).
+     * exclui as últimas 3 linhas do mapa (área da base do jogador).
+     * @param posicoesUsadas posições já reservadas neste ciclo de spawn — evita sobreposição.
      */
     private int[] encontrarLugarAleatorio(java.util.Set<Long> posicoesUsadas) {
-        // Tentativa aleatória — rápida na maioria dos casos
+        // tentativa aleatória rápida na maioria dos casos
         for (int tentativa = 0; tentativa < 500; tentativa++) {
             int col = random.nextInt(COLUNAS);
-            int lin = random.nextInt(LINHAS - 3); // Exclui área da base
+            int lin = random.nextInt(LINHAS - 3); // exclui área da base
             if (isLocalSeguro(col, lin)) {
                 int px = col * TAMANHO_BLOCO;
                 int py = lin * TAMANHO_BLOCO;
@@ -754,7 +718,7 @@ public class GamePanel extends JPanel implements Runnable {
             }
         }
 
-        // Fallback: varredura linear garante encontrar um espaço se ele existir
+        // fallback: varredura linear garante encontrar um espaço se ele existir
         for (int lin = 0; lin < LINHAS - 3; lin++) {
             for (int col = 0; col < COLUNAS; col++) {
                 if (isLocalSeguro(col, lin)) {
@@ -767,17 +731,17 @@ public class GamePanel extends JPanel implements Runnable {
             }
         }
 
-        return new int[]{0, 0}; // Último recurso — mapa completamente lotado
+        return new int[]{0, 0}; // ultimo recurso — mapa completamente lotado
     }
 
     /**
-     * Verifica se um tile é passável, tem pelo menos uma saída livre
-     * e não está ocupado por nenhum inimigo já spawnado.
-     * Evita spawnar inimigos em becos sem saída ou sobrepostos.
+     * verifica se um tile é passável, tem pelo menos uma saída livre
+     * e não está ocupado por nenhum inimigo já spawnado
+     * evita spawnar inimigos em becos sem saída ou sobrepostos
      */
     private boolean isLocalSeguro(int col, int lin) {
         int tile = gerenciadorMapa.mapaTileNum[col][lin];
-        if (tile != 0 && tile != 3) return false; // Só vazio (0) e grama (3) são passáveis
+        if (tile != 0 && tile != 3) return false; // só vazio (0) e grama (3) são passáveis
 
         int saidasLivres = 0;
         if (lin > 0           && isTilePassavel(col, lin - 1)) saidasLivres++;
@@ -786,7 +750,7 @@ public class GamePanel extends JPanel implements Runnable {
         if (col < COLUNAS - 1 && isTilePassavel(col + 1, lin)) saidasLivres++;
         if (saidasLivres < 1) return false;
 
-        // Verifica se já existe algum inimigo ocupando este tile
+        // verifica se já existe algum inimigo ocupando este tile
         int pixelX = col * TAMANHO_BLOCO;
         int pixelY = lin * TAMANHO_BLOCO;
         for (TanqueInimigo inimigo : listaInimigos) {
@@ -796,7 +760,7 @@ public class GamePanel extends JPanel implements Runnable {
         return true;
     }
 
-    /** Retorna true se o tile permite movimentação de tanques (vazio ou grama). */
+    /** retorna true se o tile permite movimentação de tanques (vazio ou grama). */
     private boolean isTilePassavel(int col, int lin) {
         int tile = gerenciadorMapa.mapaTileNum[col][lin];
         return tile == 0 || tile == 3;
@@ -811,10 +775,10 @@ public class GamePanel extends JPanel implements Runnable {
     }
 
     /**
-     * Calcula o bônus de fim de fase e acumula na pontuação total.
+     * calcula o bônus de fim de fase e acumula na pontuação total
      *
-     * Fórmula: pontuacaoFase × (1 + vidas + hp)
-     * Exemplo: 500pts com 3 vidas e 75 HP → bônus = 500 × 79 = 39.500
+     * fórmula: pontuacaoFase × (1 + vidas + hp)
+     * exemplo: 500pts com 3 vidas e 75 HP → bônus = 500 × 79 = 39.500
      */
     public void calcularBonusFimDeFase() {
         int bonus = pontuacaoFase
@@ -824,15 +788,12 @@ public class GamePanel extends JPanel implements Runnable {
         pontuacaoFase   = 0;
     }
 
-    // =========================================================================
     // MOTOR DO GAME LOOP
-    // =========================================================================
-
     /**
-     * Inicia a thread do game loop.
-     * O if (gameThread == null) protege contra dupla inicialização —
+     * inicia a thread do game loop
+     * if (gameThread == null) protege contra dupla inicialização
      * Main.iniciarJogo() também chama este método após montar a janela,
-     * mas a segunda chamada é ignorada com segurança.
+     * mas a segunda chamada é ignorada com segurança
      */
     public void iniciarThreadJogo() {
         if (gameThread == null) {
@@ -843,8 +804,8 @@ public class GamePanel extends JPanel implements Runnable {
     }
 
     /**
-     * Game loop com fixed timestep a 60 FPS.
-     * Calcula o tempo restante após atualizar() e repaint() e dorme
+     * game loop com fixed timestep a 60 FPS.
+     * calcula o tempo restante após atualizar() e repaint() e dorme
      * esse intervalo para manter o framerate constante sem busy-wait.
      */
     @Override
@@ -856,30 +817,28 @@ public class GamePanel extends JPanel implements Runnable {
             atualizar();
             repaint();
 
-            // Dorme o tempo restante até o próximo frame
+            // dorme o tempo restante até o próximo frame
             double tempoRestanteMs = (proximoFrame - System.nanoTime()) / 1_000_000.0;
             try {
                 Thread.sleep((long) Math.max(0, tempoRestanteMs));
             } catch (InterruptedException e) {
-                Thread.currentThread().interrupt(); // Restaura flag de interrupção — boa prática
+                Thread.currentThread().interrupt(); // restaura flag de interrupção
             }
             proximoFrame += intervaloPorFrame;
         }
     }
 
-    // =========================================================================
     // MÉTODOS PÚBLICOS DE SUPORTE
-    // =========================================================================
-
+    
     /**
-     * Adiciona um projétil de forma thread-safe (synchronized).
-     * Chamado por TanqueJogador e TanqueInimigo em suas próprias threads.
+     * adiciona um projétil de forma thread-safe (synchronized)
+     * chamado por TanqueJogador e TanqueInimigo em suas próprias threads
      */
     public synchronized void adicionarProjetil(Projetil projetil) {
         if (projeteis != null) projeteis.add(projetil);
     }
 
-    /** Carrega imagens de overlay (morte, game over, vitória). */
+    /** carrega imagens de estado de jogo (morte, game over, vitória). */
     private void carregarImagensExtras() {
         try {
             imgAvisoMorte = ImageUtils.transformarTransparente(
