@@ -96,7 +96,7 @@ public class TanqueJogador extends Entidade implements Movivel, Runnable {
 
     @Override
     public void run() {
-        while (threadTanque != null) {
+        while (gp.rodando) {
             // Só processa input durante o jogo — evita mover/atirar durante MORTE e GAMEOVER
             if (gp.estadoJogo == gp.ESTADO_JOGANDO) {
                 mover();

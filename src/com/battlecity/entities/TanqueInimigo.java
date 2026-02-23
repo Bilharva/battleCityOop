@@ -50,10 +50,18 @@ public class TanqueInimigo extends Entidade implements Movivel, Runnable {
         this.hitbox.setBounds(x + gp.HITBOX_MARGEM, y + gp.HITBOX_MARGEM,
                               gp.HITBOX_TAMANHO, gp.HITBOX_TAMANHO);
 
-        // Daemon: a JVM não precisa aguardar esta thread para encerrar
+        // Thread criada mas NÃO iniciada aqui — GamePanel.iniciarFase() chama
+        // iniciarThread() após todos os inimigos serem posicionados, evitando
+        // que threads comecem a mover inimigos antes do spawn estar completo.
         threadInimigo = new Thread(this);
         threadInimigo.setDaemon(true);
-        threadInimigo.start();
+    }
+
+    /** Inicia o movimento do tanque. Deve ser chamado após todos os spawns da fase. */
+    public void iniciarThread() {
+        if (!threadInimigo.isAlive()) {
+            threadInimigo.start();
+        }
     }
 
     // =========================================================================

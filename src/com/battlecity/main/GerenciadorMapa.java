@@ -49,7 +49,7 @@ public class GerenciadorMapa {
         this.tiposDeBlocos = new Bloco[10];
 
         carregarImagensBlocos();
-        carregarFase(1);
+        // carregarFase() NÃO é chamado aqui — GamePanel.iniciarFase() já faz isso.
     }
 
     // =========================================================================

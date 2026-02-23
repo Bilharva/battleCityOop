@@ -98,7 +98,7 @@ public class Projetil extends Entidade implements Movivel, Runnable {
         int tileID = gp.gerenciadorMapa.mapaTileNum[col][lin];
 
         switch (tileID) {
-            case 1 -> { gp.gerenciadorMapa.mapaTileNum[col][lin] = 0; ativo = false; } // Tijolo destruído
+            case 1 -> { gp.gerenciadorMapa.verificarColisaoETransformar(x + 5, y + 5); ativo = false; } // Tijolo destruído (+10pts)
             case 4 -> ativo = false; // Aço: bloqueia sem destruir
             case 2 -> ativo = false; // Base: GamePanel aciona Game Over
         }

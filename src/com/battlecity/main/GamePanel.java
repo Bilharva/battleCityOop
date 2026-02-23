@@ -253,15 +253,26 @@ public class GamePanel extends JPanel implements Runnable {
             jogador.hp = HP_MAXIMO;
         }
 
-        // Spawna inimigos com tipo variando por dificuldade
+        // Spawna inimigos com tipo variando por dificuldade.
+        // posicoesUsadas guarda os spawns já alocados neste loop — independente
+        // de onde as threads já moveram os inimigos anteriores.
+        java.util.Set<Long> posicoesUsadas = new java.util.HashSet<>();
         for (int i = 0; i < totalInimigosFase; i++) {
-            int[] coordInimigo = encontrarLugarAleatorio();
+            int[] coordInimigo = encontrarLugarAleatorio(posicoesUsadas);
+            posicoesUsadas.add((long) coordInimigo[0] << 32 | coordInimigo[1]);
             int tipo = switch (dificuldade) {
                 case 0  -> 0;                  // Fácil: só normais (cinza)
                 case 1  -> random.nextInt(2);  // Médio: normais e rápidos (verde)
                 default -> random.nextInt(3);  // Difícil: todos (cinza, verde, vermelho)
             };
             listaInimigos.add(new TanqueInimigo(this, coordInimigo[0], coordInimigo[1], tipo));
+        }
+
+        // Só inicia as threads após TODOS os inimigos estarem posicionados.
+        // Evita que threads dos primeiros inimigos os movam antes dos últimos serem spawnados,
+        // o que causava sobreposição de tanques no início da fase.
+        for (TanqueInimigo inimigo : listaInimigos) {
+            inimigo.iniciarThread();
         }
     }
 
@@ -297,7 +308,7 @@ public class GamePanel extends JPanel implements Runnable {
             }
 
         } else if (estadoJogo == ESTADO_GAMEOVER && !scoreSalvo) {
-            // Score salvo assim que entra em game over — garante que só ocorre uma vez
+            // score salvo assim que entra em game over — garante que só ocorre uma vez
             GerenciadorRanking.adicionarScore(nomeJogador, pontuacaoTotal);
             scoreSalvo = true;
 
@@ -333,7 +344,7 @@ public class GamePanel extends JPanel implements Runnable {
      * Verifica todas as colisões relevantes a cada frame.
      *
      * A ORDEM IMPORTA:
-     *   1. Base (Águia) — verificada ANTES do isAtivo() porque Projetil pode
+     *   1. Base (Águia) — verificada ANTES do isAtivo() pq Projetil pode
      *      ser desativado por verificarColisaoCenario() ao tocar o tile 2, mas
      *      só o GamePanel pode acionar o Game Over. Checar isAtivo() primeiro
      *      faria o projétil ser ignorado antes de verificar a base.
@@ -356,14 +367,14 @@ public class GamePanel extends JPanel implements Runnable {
                 return;
             }
 
-            if (!projetil.isAtivo()) continue; // Projéteis já desativados ignorados daqui em diante
+            if (!projetil.isAtivo()) continue; // projéteis já desativados ignorados daqui em diante
 
             // 2. COLISÃO PROJÉTIL → INIMIGO
             for (TanqueInimigo inimigo : listaInimigos) {
                 if (inimigo.isVivo() && projetil.hitbox.intersects(inimigo.hitbox)) {
 
                     if (projetil.origem == jogador) {
-                        // Projétil do jogador acertou um inimigo
+                        // projétil do jogador acertou um inimigo
                         projetil.setAtivo(false);
                         inimigo.setVivo(false);
                         explosoes.add(new Explosao(this, inimigo.getX(), inimigo.getY()));
@@ -438,7 +449,7 @@ public class GamePanel extends JPanel implements Runnable {
         Graphics2D g2 = (Graphics2D) g;
         if (gerenciadorMapa == null) return;
 
-        // Camadas do mundo
+        // camadas do mundo
         gerenciadorMapa.desenharCamadaBaixo(g2);
         if (jogador != null && jogador.isVivo()) jogador.desenhar(g2);
         for (TanqueInimigo inimigo  : listaInimigos) if (inimigo.isVivo())                   inimigo.desenhar(g2);
@@ -485,20 +496,20 @@ public class GamePanel extends JPanel implements Runnable {
         // ── SEÇÃO: Cabeçalho (jogador + score + modo) ─────────────────────
         int y = 18;
 
-        // Label "JOGADOR"
+        // label "JOGADOR"
         g2.setFont(new Font("Monospaced", Font.PLAIN, 10));
         g2.setColor(new Color(140, 140, 160));
         g2.drawString("JOGADOR", CX, y);
         y += 16;
 
-        // Nome do jogador em destaque
+        // nome do jogador em destaque
         g2.setFont(new Font("Monospaced", Font.BOLD, 15));
         g2.setColor(new Color(255, 200, 50));
         String nomeExibido = nomeJogador.length() > 11 ? nomeJogador.substring(0, 11) : nomeJogador;
         g2.drawString(nomeExibido, CX, y);
         y += 18;
 
-        // Score
+        // score
         g2.setFont(new Font("Monospaced", Font.PLAIN, 10));
         g2.setColor(new Color(140, 140, 160));
         g2.drawString("PONTUAÇÃO", CX, y);
@@ -508,7 +519,7 @@ public class GamePanel extends JPanel implements Runnable {
         g2.drawString(String.format("%07d", pontuacaoTotal + pontuacaoFase), CX, y);
         y += 16;
 
-        // Modo de dificuldade
+        // modo de dificuldade
         String[] nomesDificuldade = {"FÁCIL", "MÉDIO", "DIFÍCIL"};
         Color[]  coresDificuldade = {new Color(80, 200, 80), new Color(240, 180, 30), new Color(220, 60, 60)};
         g2.setFont(new Font("Monospaced", Font.BOLD, 11));
@@ -516,23 +527,23 @@ public class GamePanel extends JPanel implements Runnable {
         g2.drawString("● " + nomesDificuldade[dificuldade], CX, y);
         y += 14;
 
-        // Divisor
+        // divisor
         g2.setColor(new Color(50, 55, 70));
         g2.fillRect(CX, y, CW, 1);
         y += 10;
 
-        // ── SEÇÃO: Blindagem (HP) ─────────────────────────────────────────
+        //lindagem (HP)
         g2.setFont(new Font("Monospaced", Font.PLAIN, 10));
         g2.setColor(new Color(140, 140, 160));
         g2.drawString("BLINDAGEM", CX, y);
         y += 12;
 
-        // Barra de HP com cantos arredondados
+        // barra de HP com cantos arredondados
         int hpAtual   = (jogador != null) ? jogador.hp : 0;
         int barraLarg = CW;
         int barraAlt  = 12;
         int hpLarg    = (int)((hpAtual / (float) HP_MAXIMO) * barraLarg);
-        // Fundo vermelho escuro (dano)
+        // fundo vermelho escuro (dano)
         g2.setColor(new Color(100, 20, 20));
         g2.fillRoundRect(CX, y, barraLarg, barraAlt, 6, 6);
         // HP atual: verde → amarelo → vermelho conforme percentual
@@ -546,10 +557,10 @@ public class GamePanel extends JPanel implements Runnable {
             g2.setColor(corHP);
             g2.fillRoundRect(CX, y, hpLarg, barraAlt, 6, 6);
         }
-        // Borda fina
+        // borda fina
         g2.setColor(new Color(80, 85, 100));
         g2.drawRoundRect(CX, y, barraLarg, barraAlt, 6, 6);
-        // Percentual dentro da barra
+        // porrcentual dentro da barra
         g2.setFont(new Font("Monospaced", Font.BOLD, 9));
         g2.setColor(Color.WHITE);
         String pctStr = (int)(pct * 100) + "%";
@@ -557,12 +568,12 @@ public class GamePanel extends JPanel implements Runnable {
         g2.drawString(pctStr, pctX, y + barraAlt - 2);
         y += barraAlt + 12;
 
-        // Divisor
+        // divisor
         g2.setColor(new Color(50, 55, 70));
         g2.fillRect(CX, y, CW, 1);
         y += 12;
 
-        // ── SEÇÃO: Vidas ──────────────────────────────────────────────────
+        // vidas
         int vidas = (jogador != null) ? jogador.vidas : 0;
 
         g2.setFont(new Font("Monospaced", Font.PLAIN, 10));
@@ -570,7 +581,7 @@ public class GamePanel extends JPanel implements Runnable {
         g2.drawString("VIDAS", CX, y);
         y += 14;
 
-        // Ícones de vida (até 5 ícones; se tiver mais, mostra "xN" ao lado)
+        // icones de vida (até 5 ícones; se tiver mais, mostra "xN" ao lado)
         int iconeSize  = 24;
         int iconeGap   = 4;
         int maxIcones  = Math.min(vidas, 5);
@@ -580,25 +591,25 @@ public class GamePanel extends JPanel implements Runnable {
             if (hudImagemVida != null) {
                 g2.drawImage(hudImagemVida, CX + i * (iconeSize + iconeGap), iconeY, iconeSize, iconeSize, null);
             } else {
-                // Fallback: coração vermelho
+                // fallback: coração vermelho
                 g2.setFont(new Font("Arial", Font.BOLD, 20));
                 g2.setColor(new Color(220, 50, 50));
                 g2.drawString("♥", CX + i * (iconeSize + iconeGap), iconeY + iconeSize - 2);
             }
         }
-        // Número de vidas ao lado dos ícones (sempre visível)
+        // número de vidas ao lado dos ícones (sempre visível)
         g2.setFont(new Font("Monospaced", Font.BOLD, 18));
         g2.setColor(Color.WHITE);
         int numX = CX + maxIcones * (iconeSize + iconeGap) + 4;
         g2.drawString("x" + vidas, numX, iconeY + iconeSize - 4);
         y += iconeSize + 12;
 
-        // Divisor
+        // divisor
         g2.setColor(new Color(50, 55, 70));
         g2.fillRect(CX, y, CW, 1);
         y += 12;
 
-        // ── SEÇÃO: Inimigos ───────────────────────────────────────────────
+        //inimigos
         int inimigoRestantes = totalInimigosFase - inimigosMortos;
 
         g2.setFont(new Font("Monospaced", Font.PLAIN, 10));
@@ -606,12 +617,12 @@ public class GamePanel extends JPanel implements Runnable {
         g2.drawString("INIMIGOS", CX, y);
         y += 14;
 
-        // Contador grande em vermelho
+        // contador grande vermelho
         g2.setFont(new Font("Monospaced", Font.BOLD, 32));
         g2.setColor(new Color(220, 60, 60));
         g2.drawString("x" + inimigoRestantes, CX, y + 28);
 
-        // Mini barra de progresso da fase (inimigos mortos / total)
+        // mini barra de progresso da fase (inimigos mortos / total)
         int progY     = y + 36;
         int progLarg  = CW;
         int progAlt   = 6;
@@ -624,14 +635,14 @@ public class GamePanel extends JPanel implements Runnable {
         g2.drawRoundRect(CX, progY, progLarg, progAlt, 4, 4);
         y += 50;
 
-        // Divisor
+        // divisor
         g2.setColor(new Color(50, 55, 70));
         g2.fillRect(CX, y, CW, 1);
 
-        // ── SEÇÃO: Fase (rodapé) ──────────────────────────────────────────
+        // fase (rodapé)
         int rodapeY = H - 44;
 
-        // Caixa de destaque da fase
+        // caixa de destaque da fase
         g2.setColor(new Color(30, 35, 50));
         g2.fillRoundRect(CX, rodapeY, CW, 34, 8, 8);
         g2.setColor(new Color(220, 120, 20));
@@ -706,7 +717,7 @@ public class GamePanel extends JPanel implements Runnable {
         }
     }
 
-    /** Navega o menu de pausa com cima/baixo e confirma com ENTER. */
+    // navega o menu de pausa com cima/baixo e confirma com ENTER
     private void atualizarMenuPausa() {
         if (teclaH.cima)  { comandoNum = (comandoNum <= 0) ? 3 : comandoNum - 1; teclaH.cima  = false; }
         if (teclaH.baixo) { comandoNum = (comandoNum >= 3) ? 0 : comandoNum + 1; teclaH.baixo = false; }
@@ -721,23 +732,25 @@ public class GamePanel extends JPanel implements Runnable {
             }
         }
     }
-
-    // =========================================================================
     // AUXILIARES DE SPAWN
-    // =========================================================================
-
+    
     /**
      * Encontra coordenadas de pixel seguras para spawnar um inimigo.
      * Tenta 500 posições aleatórias antes de fazer varredura linear (fallback).
      * Exclui as últimas 3 linhas do mapa (área da base do jogador).
+     * @param posicoesUsadas Posições já reservadas neste ciclo de spawn — evita sobreposição.
      */
-    private int[] encontrarLugarAleatorio() {
+    private int[] encontrarLugarAleatorio(java.util.Set<Long> posicoesUsadas) {
         // Tentativa aleatória — rápida na maioria dos casos
         for (int tentativa = 0; tentativa < 500; tentativa++) {
             int col = random.nextInt(COLUNAS);
             int lin = random.nextInt(LINHAS - 3); // Exclui área da base
             if (isLocalSeguro(col, lin)) {
-                return new int[]{col * TAMANHO_BLOCO, lin * TAMANHO_BLOCO};
+                int px = col * TAMANHO_BLOCO;
+                int py = lin * TAMANHO_BLOCO;
+                if (!posicoesUsadas.contains((long) px << 32 | py)) {
+                    return new int[]{px, py};
+                }
             }
         }
 
@@ -745,17 +758,22 @@ public class GamePanel extends JPanel implements Runnable {
         for (int lin = 0; lin < LINHAS - 3; lin++) {
             for (int col = 0; col < COLUNAS; col++) {
                 if (isLocalSeguro(col, lin)) {
-                    return new int[]{col * TAMANHO_BLOCO, lin * TAMANHO_BLOCO};
+                    int px = col * TAMANHO_BLOCO;
+                    int py = lin * TAMANHO_BLOCO;
+                    if (!posicoesUsadas.contains((long) px << 32 | py)) {
+                        return new int[]{px, py};
+                    }
                 }
             }
         }
 
-        return new int[]{0, 0}; // Último recurso — mapa completamente bloqueado
+        return new int[]{0, 0}; // Último recurso — mapa completamente lotado
     }
 
     /**
-     * Verifica se um tile é passável E tem pelo menos uma saída livre.
-     * Evita spawnar inimigos em becos sem saída.
+     * Verifica se um tile é passável, tem pelo menos uma saída livre
+     * e não está ocupado por nenhum inimigo já spawnado.
+     * Evita spawnar inimigos em becos sem saída ou sobrepostos.
      */
     private boolean isLocalSeguro(int col, int lin) {
         int tile = gerenciadorMapa.mapaTileNum[col][lin];
@@ -766,8 +784,16 @@ public class GamePanel extends JPanel implements Runnable {
         if (lin < LINHAS - 1  && isTilePassavel(col, lin + 1)) saidasLivres++;
         if (col > 0           && isTilePassavel(col - 1, lin)) saidasLivres++;
         if (col < COLUNAS - 1 && isTilePassavel(col + 1, lin)) saidasLivres++;
+        if (saidasLivres < 1) return false;
 
-        return saidasLivres >= 1;
+        // Verifica se já existe algum inimigo ocupando este tile
+        int pixelX = col * TAMANHO_BLOCO;
+        int pixelY = lin * TAMANHO_BLOCO;
+        for (TanqueInimigo inimigo : listaInimigos) {
+            if (inimigo.getX() == pixelX && inimigo.getY() == pixelY) return false;
+        }
+
+        return true;
     }
 
     /** Retorna true se o tile permite movimentação de tanques (vazio ou grama). */
